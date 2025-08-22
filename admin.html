@@ -49,6 +49,41 @@
         input, textarea, button, select {
             font-family: 'CustomFont', sans-serif !important;
         }
+        .toggle-label {
+            display: inline-flex;
+            align-items: center;
+            cursor: pointer;
+            color: #34d399;
+        }
+        .toggle-checkbox {
+            display: none;
+        }
+        .toggle-switch {
+            position: relative;
+            width: 40px;
+            height: 20px;
+            background: #4b5563;
+            border-radius: 9999px;
+            transition: background 0.3s ease;
+            margin-left: 8px;
+        }
+        .toggle-switch::before {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+        .toggle-checkbox:checked + .toggle-switch {
+            background: #34d399;
+        }
+        .toggle-checkbox:checked + .toggle-switch::before {
+            transform: translateX(20px);
+        }
     </style>
 </head>
 <body>
@@ -124,6 +159,25 @@
                     required
                 >
             </div>
+            <div>
+                <label class="block text-gray-200 font-semibold mb-2" for="refundableInput">Refundable Amount (₹)</label>
+                <input
+                    type="number"
+                    id="refundableInput"
+                    min="0"
+                    step="1"
+                    class="w-full px-4 py-3 rounded-xl border border-gray-600 bg-gray-800 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-green-400 focus:border-green-400 text-gray-200 font-semibold"
+                    placeholder="e.g. 100"
+                    required
+                >
+            </div>
+            <div>
+                <label class="toggle-label">
+                    Enable Code
+                    <input type="checkbox" id="enableCode" class="toggle-checkbox">
+                    <span class="toggle-switch"></span>
+                </label>
+            </div>
             <button
                 type="button"
                 id="addCodeBtn"
@@ -131,7 +185,7 @@
             >
                 Add Code
             </button>
-            <p id="codeError" class="error-message">Please enter a valid 4-digit code, message, and non-negative amount!</p>
+            <p id="codeError" class="error-message">Please enter a valid 4-digit code, message, and non-negative amounts!</p>
             <p id="codeSuccess" class="success-message">Code added successfully!</p>
 
             <!-- Code List -->
@@ -143,8 +197,6 @@
     </div>
 
     <script>
-        console.log("admin.html script loaded");
-
         // Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyCRKoruLajxOkuuKW5iMieidfEdAjw_Kcg",
@@ -171,6 +223,8 @@
         const newCode = document.getElementById('newCode');
         const popupMessageInput = document.getElementById('popupMessage');
         const amountInput = document.getElementById('amountInput');
+        const refundableInput = document.getElementById('refundableInput');
+        const enableCode = document.getElementById('enableCode');
         const codeError = document.getElementById('codeError');
         const codeSuccess = document.getElementById('codeSuccess');
         const codeList = document.getElementById('codeList');
@@ -206,10 +260,12 @@
             const code = newCode.value.trim();
             const message = popupMessageInput.value.trim();
             const amount = parseInt(amountInput.value.trim());
+            const refundable = parseInt(refundableInput.value.trim());
+            const enabled = enableCode.checked;
 
-            if (!/^\d{4}$/.test(code) || message.length === 0 || isNaN(amount) || amount < 0) {
+            if (!/^\d{4}$/.test(code) || message.length === 0 || isNaN(amount) || amount < 0 || isNaN(refundable) || refundable < 0) {
                 codeError.style.display = 'block';
-                codeError.textContent = 'Please enter a valid 4-digit code, message, and non-negative amount!';
+                codeError.textContent = 'Please enter a valid 4-digit code, message, and non-negative amounts!';
                 codeSuccess.style.display = 'none';
                 return;
             }
@@ -227,7 +283,9 @@
                     code,
                     message,
                     icon: message.toLowerCase().includes('thank') ? 'heart' : 'exclamation-circle',
-                    amount
+                    amount,
+                    refundable,
+                    enabled
                 };
 
                 database.ref('codes/' + code).set(newCodeData)
@@ -235,6 +293,8 @@
                         newCode.value = '';
                         popupMessageInput.value = '';
                         amountInput.value = '';
+                        refundableInput.value = '';
+                        enableCode.checked = false;
                         codeError.style.display = 'none';
                         codeSuccess.style.display = 'block';
                         loadCodes();
@@ -273,19 +333,40 @@
                         <div>
                             <strong>Code:</strong> ${item.code}<br>
                             <strong>Message:</strong> ${item.message}<br>
-                            <strong>Amount:</strong> ₹ ${item.amount}
+                            <strong>Amount:</strong> ₹ ${item.amount}<br>
+                            <strong>Refundable:</strong> ₹ ${item.refundable || 0}<br>
+                            <strong>Enabled:</strong> ${item.enabled ? 'Yes' : 'No'}
                         </div>
-                        <button
-                            class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg"
-                            onclick="deleteCode('${item.code}')"
-                        >
-                            Delete
-                        </button>
+                        <div class="flex items-center space-x-2">
+                            <label class="toggle-label">
+                                <input type="checkbox" class="toggle-checkbox" ${item.enabled ? 'checked' : ''} onchange="toggleCodeStatus('${item.code}', this.checked)">
+                                <span class="toggle-switch"></span>
+                            </label>
+                            <button
+                                class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg"
+                                onclick="deleteCode('${item.code}')"
+                            >
+                                Delete
+                            </button>
+                        </div>
                     </div>
                 `;
                 codeList.appendChild(li);
             });
         }
+
+        window.toggleCodeStatus = function(code, isEnabled) {
+            database.ref('codes/' + code).update({ enabled: isEnabled })
+                .then(() => {
+                    console.log(`Code ${code} enabled status updated to ${isEnabled}`);
+                    loadCodes();
+                })
+                .catch((error) => {
+                    console.error("Error updating code status:", error);
+                    codeError.style.display = 'block';
+                    codeError.textContent = 'Error updating code status!';
+                });
+        };
 
         window.deleteCode = function(code) {
             database.ref('codes/' + code).remove()
