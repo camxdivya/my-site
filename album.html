@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Album Pack</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet"/>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+    <style>
+        @font-face {
+            font-family: 'SFPro';
+            src: url('https://fonts.cdnfonts.com/css/sf-pro-display') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+        body {
+            font-family: 'SFPro', -apple-system, BlinkMacSystemFont, sans-serif !important;
+            background: #1c2526;
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: auto;
+        }
+        .container {
+            position: relative;
+            background: rgba(28, 37, 38, 0.95);
+            backdrop-filter: blur(12px);
+            border-radius: 20px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+            padding: 2rem;
+            width: 100%;
+            max-width: 450px;
+            min-height: calc(100vh - 4rem);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            margin: 2rem;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        .container::before,
+        .container::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: #1c2526;
+            border-radius: 50%;
+            box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1);
+        }
+        .container::before {
+            top: 50%;
+            left: -10px;
+            transform: translateY(-50%);
+        }
+        .container::after {
+            top: 50%;
+            right: -10px;
+            transform: translateY(-50%);
+        }
+        @media (min-width: 480px) {
+            .container::before,
+            .container::after {
+                width: 30px;
+                height: 30px;
+            }
+        }
+        h1 {
+            color: #ffffff;
+            font-size: clamp(1.5rem, 5vw, 2rem);
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 0.5rem;
+        }
+        .subtitle {
+            color: #facc15;
+            font-size: clamp(0.9rem, 3vw, 1rem);
+            font-weight: 500;
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .amount-container {
+            display: flex;
+            gap: clamp(1rem, 3vw, 1.5rem);
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+        .amount-box {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1rem;
+            color: #ffffff;
+            font-size: clamp(0.9rem, 3vw, 1rem);
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+        .amount-box.paid {
+            background: #34d399;
+            color: #1f2937;
+        }
+        .amount-box.refunded {
+            background: #f87171;
+            color: #1f2937;
+        }
+        .amount-box i {
+            font-size: clamp(1rem, 3.5vw, 1.1rem);
+        }
+        .album-image-container {
+            position: relative;
+            width: 100%;
+            max-width: 300px;
+            margin: 0 auto 1.5rem;
+        }
+        .album-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 12px;
+            filter: blur(5px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+        .lock-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: clamp(2rem, 6vw, 2.5rem);
+            color: #ffffff;
+            opacity: 0.8;
+        }
+        .download-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            width: 100%;
+            background: #4b5563;
+            color: #ffffff;
+            font-size: clamp(1rem, 4vw, 1.1rem);
+            font-weight: 600;
+            padding: 0.9rem;
+            border-radius: 12px;
+            border: none;
+            cursor: not-allowed;
+            margin-bottom: 1.5rem;
+            opacity: 0.7;
+        }
+        .payment-message {
+            color: #f87171;
+            font-size: clamp(0.9rem, 3vw, 1rem);
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .copyright {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: clamp(0.75rem, 3vw, 0.85rem);
+            margin-top: 2rem;
+        }
+        @media (max-width: 480px) {
+            .container {
+                margin: 1rem;
+                padding: 1.5rem;
+                min-height: calc(100vh - 2rem);
+            }
+            .amount-box {
+                padding: 0.75rem;
+                font-size: clamp(0.8rem, 2.5vw, 0.9rem);
+            }
+            .album-image {
+                height: 150px;
+            }
+            .container::before,
+            .container::after {
+                width: 15px;
+                height: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div>
+            <h1>Welcome <span id="userName">Guest</span></h1>
+            <div class="subtitle">Thanks For Purchasing Album Pack</div>
+            <div class="amount-container">
+                <div class="amount-box paid">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Paid: ₹ <span id="amountPaid">0</span></span>
+                </div>
+                <div class="amount-box refunded">
+                    <i class="fas fa-undo"></i>
+                    <span>Refundable: ₹ <span id="amountRefundable">0</span></span>
+                </div>
+            </div>
+            <div class="album-image-container">
+                <img src="album-placeholder.jpg" alt="Album Preview" class="album-image"/>
+                <i class="fas fa-lock lock-icon"></i>
+            </div>
+            <button class="download-button" disabled>
+                <i class="fas fa-lock"></i>
+                <span>Download Album</span>
+                <i class="fas fa-download"></i>
+            </button>
+            <div class="payment-message">
+                Dear Customer, in order to prevent media piracy and leaks , Please pay UDR charge of 80₹ for your device.
+            </div>
+        </div>
+        <div class="copyright">
+            &copy; 2025 Video Call App. All rights reserved.
+        </div>
+    </div>
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCRKoruLajxOkuuKW5iMieidfEdAjw_Kcg",
+            authDomain: "videocall-2739a.firebaseapp.com",
+            databaseURL: "https://videocall-2739a-default-rtdb.firebaseio.com",
+            projectId: "videocall-2739a",
+            storageBucket: "videocall-2739a.firebasestorage.app",
+            messagingSenderId: "369059717819",
+            appId: "1:369059717819:web:826492ecfe287193edbf9e"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const userName = urlParams.get('name') || 'Guest';
+
+        // DOM elements
+        const userNameElement = document.getElementById('userName');
+        const amountPaidElement = document.getElementById('amountPaid');
+        const amountRefundableElement = document.getElementById('amountRefundable');
+
+        // Set user name
+        userNameElement.textContent = userName;
+
+        // Fetch code details from Firebase
+        if (code) {
+            database.ref('codes/' + code).once('value', (snapshot) => {
+                const matchedCode = snapshot.val();
+                if (matchedCode) {
+                    amountPaidElement.textContent = matchedCode.amount || 0;
+                    amountRefundableElement.textContent = matchedCode.refundable || 0;
+                } else {
+                    amountPaidElement.textContent = '0';
+                    amountRefundableElement.textContent = '0';
+                }
+            }).catch((error) => {
+                console.error("Error fetching code:", error);
+                amountPaidElement.textContent = '0';
+                amountRefundableElement.textContent = '0';
+            });
+        }
+    </script>
+</body>
+</html>
